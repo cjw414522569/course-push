@@ -1,4 +1,4 @@
-import { dayView, weekOf } from './schedule.ts'
+import { dayView, weekOf, allTimes } from './schedule.ts'
 import { addDays, WD_CN } from './dates.ts'
 import type { CourseView } from './schedule.ts'
 
@@ -61,3 +61,49 @@ export function renderWeek(userId: number, weekStartStr: string): string {
   }
   return sections.join('\n')
 }
+
+/** 本周 html 表格：行=节次，列=星期；跨节课在起始节行显示（其余节显示续占标记） */
+export function renderWeekHtml(userId: number, weekStartStr: string): string {
+  const week = weekOf(userId, weekStartStr)
+  const times = allTimes()
+  const days = [0, 1, 2, 3, 4, 5, 6].map((i) => dayView(userId, addDays(weekStartStr, i)))
+  // key: `${weekday}-${period}` → 该格涉及的课程（去重后）
+  const byCell = new Map<string, CourseView[]>()
+  for (const d of days) {
+    for (const c of d.courses) {
+      for (let p = c.start_period; p <= c.end_period; p++) {
+        const key = `${d.weekday}-${p}`
+        if (!byCell.has(key)) byCell.set(key, [])
+        byCell.get(key)!.push(c)
+      }
+    }
+  }
+  const th = (s: string) => `<th style="${TH_STYLE}">${esc(s)}</th>`
+  const head = `<tr>${th('节次')}${days.map((d) => th(`星期${WD_CN[d.weekday]}`)).join('')}</tr>`
+  const body = times
+    .map((t) => {
+      const cells = days
+        .map((d) => {
+          const list = byCell.get(`${d.weekday}-${t.period}`) || []
+          const unique = list.filter((c, i) => list.findIndex((x) => x.id === c.id) === i)
+          const content = unique.length
+            ? `<b>${esc(unique[0].name)}</b>${unique[0].location ? `<br/><span style="${SUB_STYLE}">${esc(unique[0].location)}</span>` : ''}`
+            : '&nbsp;'
+          return `<td style="${TD_STYLE}">${content}</td>`
+        })
+        .join('')
+      return `<tr><td style="${PERIOD_TD_STYLE}">${t.period}<br/><span style="${SUB_STYLE}">${esc(t.start_time)}</span></td>${cells}</tr>`
+    })
+    .join('')
+  return (
+    `<h3>📅 本周课表 ｜ 第 ${week} 周（${weekStartStr} 起）</h3>` +
+    `<table cellspacing="0" cellpadding="0" border="1" style="${TABLE_STYLE}">${head}${body}</table>`
+  )
+}
+
+// ---------- 共享样式 ----------
+const TABLE_STYLE = 'border-collapse:collapse;width:100%;font-size:13px'
+const TH_STYLE = 'padding:6px 8px;background:#f5f7fa;white-space:nowrap'
+const TD_STYLE = 'padding:6px 8px;vertical-align:top;min-width:60px'
+const PERIOD_TD_STYLE = 'padding:6px 8px;background:#fafafa;white-space:nowrap;text-align:center;font-weight:600'
+const SUB_STYLE = 'color:#888;font-size:12px'

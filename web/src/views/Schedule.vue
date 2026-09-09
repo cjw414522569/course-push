@@ -19,6 +19,7 @@
         <table class="grid">
           <thead>
             <tr>
+              <th class="col-seg">时段</th>
               <th class="col-time">节次</th>
               <th v-for="d in weekView?.days || []" :key="d.date" :class="{ today: d.date === todayStr }">
                 <div>星期{{ d.weekdayCn }}</div>
@@ -29,10 +30,16 @@
           <tbody>
             <template v-for="(row, ri) in gridRows" :key="row.key">
               <tr v-if="boundaryBefore(row)" :class="boundaryBefore(row) === 'noon' ? 'noon-row' : 'evening-row'">
+                <td class="col-seg seg-cell" :rowspan="segSpanFrom(row)">
+                  <span class="seg-text">{{ segLabel(boundaryBefore(row)) }}</span>
+                </td>
                 <td class="col-time divider-cell">{{ boundaryBefore(row) === 'noon' ? '午休' : '晚上' }}</td>
                 <td :colspan="7" class="divider-cell">{{ boundaryText(boundaryBefore(row)) }}</td>
               </tr>
               <tr :class="{ bigRow: row.kind === 'big' }">
+              <td v-if="ri === 0 && !boundaryBefore(row)" class="col-seg seg-cell" :rowspan="segSpanFrom(row)">
+                <span class="seg-text">上午</span>
+              </td>
               <td class="col-time" :class="{ bigTime: row.kind === 'big' }">
                 <div class="period-num">{{ row.label }}</div>
                 <div class="period-time">{{ row.timeText }}</div>
@@ -223,8 +230,13 @@ const loading = ref(true)
 const saving = ref(false)
 const weekView = ref<WeekView | null>(null)
 const times = ref<ClassTime[]>([])
-const anchorDate = ref(new Date().toISOString().slice(0, 10))
-const todayStr = new Date().toISOString().slice(0, 10)
+const anchorDate = ref(localDateStr())
+const todayStr = localDateStr()
+
+/** 本地时区的 YYYY-MM-DD（toISOString 返回 UTC，东八区 0-8 点会差一天） */
+function localDateStr(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 // ---------- 网格行模型：大课占一行（双倍高、两节序号），小课每节一行 ----------
 interface GridRow {
@@ -307,6 +319,24 @@ function boundaryText(kind: 'noon' | 'evening'): string {
   return kind === 'noon'
     ? `午休 ${toHHmm(noonStart.value)} ~ ${toHHmm(noonEnd.value)}`
     : `晚间课程 ${toHHmm(eveningStart.value)} 起`
+}
+
+// ---------- 时段列（上午 / 下午 / 晚上） ----------
+/** 从 row 开始（含其分界行）到下一分界之前的总行高，供时段格 rowspan 使用。
+ *  row 必须是时段起点：带分界线的行，或表首行。 */
+function segSpanFrom(row: GridRow): number {
+  const rows = gridRows.value
+  const idx = rows.indexOf(row)
+  let span = boundaryBefore(row) ? 1 : 0 // 分界行自身
+  for (let i = idx; i < rows.length; i++) {
+    if (i > idx && boundaryBefore(rows[i])) break
+    span++
+  }
+  return Math.max(span, 1)
+}
+
+function segLabel(kind: 'noon' | 'evening'): string {
+  return kind === 'noon' ? '下午' : '晚上'
 }
 
 // ---------- 单元格课程匹配 ----------
@@ -479,7 +509,7 @@ function darken(hex: string): string {
 function shiftWeek(dir: number) {
   const d = new Date(anchorDate.value + 'T00:00:00')
   d.setDate(d.getDate() + dir * 7)
-  anchorDate.value = d.toISOString().slice(0, 10)
+  anchorDate.value = localDateStr(d)
   load()
 }
 
@@ -736,6 +766,20 @@ onMounted(load)
 thead th.today { background: #ecf5ff; }
 .grid th.today .th-date { color: #409EFF; font-weight: 600; }
 .col-time { width: 90px; background: #fafafa; }
+.col-seg { width: 44px; background: #fafafa; }
+.seg-cell {
+  background: linear-gradient(180deg, #f5f7fa 0%, #ecf5ff 100%);
+  border: 1px solid #ebeef5;
+  text-align: center;
+  vertical-align: middle;
+}
+.seg-text {
+  writing-mode: vertical-rl;
+  letter-spacing: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5a5e66;
+}
 .period-num { font-weight: 600; color: #303133; }
 .period-time { font-size: 12px; color: #909399; }
 .cell { height: 64px; padding: 2px; cursor: pointer; }

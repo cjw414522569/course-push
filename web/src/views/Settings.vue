@@ -18,23 +18,31 @@
               :placeholder="pp.has_token ? `已配置：${pp.token_masked}（输入新值可更换）` : '请输入 pushplus 用户 token'"
               show-password
             />
-            <div class="muted">获取方式：微信关注「pushplus 推送加」公众号 → 官网登录 → 一对一推送页复制 token</div>
+            <div class="muted">
+              获取方式：前往
+              <a href="https://www.pushplus.plus/push1.html" target="_blank" rel="noopener">pushplus 推送页</a>
+              登录后复制 token（微信扫码登录即自动关注公众号）
+            </div>
           </el-form-item>
           <el-form-item label="推送渠道">
-            <el-select v-model="pp.channel" style="width: 200px">
-              <el-option value="wechat" label="微信（推荐）" />
-              <el-option value="mail" label="邮件" />
-              <el-option value="cp" label="企业微信" />
-              <el-option value="qq" label="QQ" />
-              <el-option value="ding" label="钉钉" />
-            </el-select>
+            <el-checkbox-group v-model="channelList" class="channel-group">
+              <el-checkbox v-for="ch in CHANNELS" :key="ch.value" :value="ch.value" :disabled="ch.paid">
+                {{ ch.label }}
+                <el-tag v-if="ch.paid" size="small" type="danger" style="margin-left: 2px">收费</el-tag>
+              </el-checkbox>
+            </el-checkbox-group>
+            <div class="muted">
+              可多选同时推送；APP / 插件 / webhook / ClawBot / QQ机器人 等渠道需先前往
+              <a href="https://www.pushplus.plus/uc-channel.html" target="_blank" rel="noopener">pushplus 渠道设置页</a>
+              绑定，webhook 渠道还需在 pushplus 后台配置对应机器人编码
+            </div>
           </el-form-item>
-          <el-form-item label="消息模板">
+          <el-form-item label="推送形式">
             <el-select v-model="pp.template" style="width: 200px">
-              <el-option value="markdown" label="markdown（推荐）" />
-              <el-option value="html" label="html 富文本" />
-              <el-option value="txt" label="纯文本" />
+              <el-option value="markdown" label="文字（markdown）" />
+              <el-option value="html" label="表格（富文本）" />
             </el-select>
+            <div class="muted">对所有课表推送任务生效：文字为列表排版，表格为课表网格排版</div>
           </el-form-item>
           <el-form-item label="群组编码">
             <el-input v-model="pp.topic" placeholder="选填，多人订阅时填写（topic 推送）" style="width: 300px" />
@@ -119,7 +127,7 @@ curl http://localhost:3300/api/courses \
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../api'
 import type { PushplusSettings, ApiKey } from '../types'
@@ -129,6 +137,26 @@ const loading = ref(true)
 const saving = ref(false)
 const pp = ref<PushplusSettings>({ token_masked: '', has_token: false, channel: 'wechat', topic: '', template: 'markdown' })
 const tokenInput = ref('')
+
+/** pushplus 官方渠道（编码来自官方文档）；sms/voice 为收费渠道 */
+const CHANNELS: { value: string; label: string; paid?: boolean }[] = [
+  { value: 'wechat', label: '微信公众号' },
+  { value: 'app', label: 'APP' },
+  { value: 'extension', label: '插件' },
+  { value: 'webhook', label: 'Webhook（钉钉/飞书等）' },
+  { value: 'clawbot', label: '微信 ClawBot' },
+  { value: 'qq', label: 'QQ 机器人' },
+  { value: 'cp', label: '企业微信' },
+  { value: 'mail', label: '邮件' },
+  { value: 'sms', label: '短信', paid: true },
+  { value: 'voice', label: '语音', paid: true },
+]
+
+/** 渠道多选值 ↔ 后端逗号分隔字符串 */
+const channelList = computed({
+  get: () => (pp.value.channel ? pp.value.channel.split(',').filter(Boolean) : []),
+  set: (v: string[]) => { pp.value.channel = v.length ? v.join(',') : 'wechat' },
+})
 
 async function load() {
   loading.value = true
@@ -217,4 +245,8 @@ onMounted(() => {
   overflow-x: auto;
   white-space: pre;
 }
+.channel-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+.channel-group :deep(.el-checkbox) { margin-right: 0; }
+a { color: #409eff; text-decoration: none; }
+a:hover { text-decoration: underline; }
 </style>

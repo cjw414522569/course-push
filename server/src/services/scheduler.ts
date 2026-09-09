@@ -4,7 +4,7 @@ import { TZ } from '../config.ts'
 import { send } from './pushplus.ts'
 import { getSetting } from './userSettings.ts'
 import { coursesOn, weekOf } from './schedule.ts'
-import { renderDay, renderDayHtml, renderWeek } from './render.ts'
+import { renderDay, renderDayHtml, renderWeek, renderWeekHtml } from './render.ts'
 import { todayInTz, addDays, mondayOf } from './dates.ts'
 
 export interface TaskRow {
@@ -40,7 +40,10 @@ function buildContent(task: TaskRow): { title: string; content: string } | null 
     case 'week': {
       const monday = mondayOf(today)
       if (!task.send_empty && !weekHasCourse(uid, monday)) return null
-      return { title: `本周课表 · 第 ${weekOf(uid, monday)} 周`, content: renderWeek(uid, monday) }
+      return {
+        title: `本周课表 · 第 ${weekOf(uid, monday)} 周`,
+        content: template === 'html' ? renderWeekHtml(uid, monday) : renderWeek(uid, monday),
+      }
     }
     default:
       return null

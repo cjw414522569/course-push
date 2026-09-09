@@ -71,9 +71,22 @@
       <div class="preview-box">
         <div class="pb-head">
           <span>推送内容预览</span>
-          <el-button size="small" text type="primary" :loading="previewing" @click="loadPreview">刷新</el-button>
+          <div class="pb-actions">
+            <el-radio-group v-model="previewTemplate" size="small" @change="loadPreview">
+              <el-radio-button value="markdown">文字</el-radio-button>
+              <el-radio-button value="html">表格</el-radio-button>
+            </el-radio-group>
+            <el-button size="small" text type="primary" :loading="previewing" @click="loadPreview">刷新</el-button>
+          </div>
         </div>
-        <pre class="pb-content">{{ preview || '加载中…' }}</pre>
+        <!-- 表格形式用 iframe 渲染真实 html 效果；文字形式直接显示 markdown 源 -->
+        <iframe
+          v-if="previewTemplate === 'html'"
+          class="pb-frame"
+          :srcdoc="preview"
+          sandbox=""
+        />
+        <pre v-else class="pb-content">{{ preview || '加载中…' }}</pre>
       </div>
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
@@ -142,12 +155,16 @@ const rules: FormRules = {
 
 const preview = ref('')
 const previewing = ref(false)
+/** 预览形式：文字(markdown 源) / 表格(html iframe 渲染) */
+const previewTemplate = ref<'markdown' | 'html'>('markdown')
 
 async function loadPreview() {
   previewing.value = true
   try {
-    const res = await api.preview(form.type || 'today', 'markdown')
-    preview.value = `${res.title}\n${'─'.repeat(24)}\n${res.content}`
+    const res = await api.preview(form.type || 'today', previewTemplate.value)
+    preview.value = previewTemplate.value === 'html'
+      ? `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;margin:10px;font-size:13px;color:#303133}</style></head><body><h3 style="margin:0 0 8px">${res.title}</h3>${res.content}</body></html>`
+      : `${res.title}\n${'─'.repeat(24)}\n${res.content}`
   } finally {
     previewing.value = false
   }
@@ -189,4 +206,6 @@ onMounted(load)
   padding: 10px 12px; font-size: 12px; color: #303133;
   max-height: 200px; overflow-y: auto; font-family: inherit; white-space: pre-wrap;
 }
+.pb-frame { width: 100%; height: 220px; border: none; }
+.pb-actions { display: flex; align-items: center; gap: 8px; }
 </style>

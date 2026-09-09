@@ -13,34 +13,40 @@ export interface SendOptions {
   title: string
   content: string
   template?: string // html | txt | json | markdown
+  /** 逗号分隔多渠道（如 "wechat,mail"）；单渠道走 /send，多渠道走 /batchSend */
   channel?: string
   topic?: string
 }
 
-/** 调用 pushplus /send。接口为异步：code=200 仅代表入队，返回流水号 shortCode。 */
+/** 调用 pushplus。接口为异步：code=200 仅代表入队，返回流水号 shortCode（batchSend 为流水号数组）。 */
 export async function send(encToken: string, opts: SendOptions): Promise<SendResult> {
   const token = decrypt(encToken)
-  const body: Record<string, unknown> = {
+  const channels = (opts.channel || 'wechat').split(',').map((s) => s.trim()).filter(Boolean)
+  const base: Record<string, unknown> = {
     token,
     title: opts.title,
     content: opts.content,
     template: opts.template || 'markdown',
-    channel: opts.channel || 'wechat',
   }
-  if (opts.topic) body.topic = opts.topic
+  if (opts.topic) base.topic = opts.topic
 
   try {
-    const res = await fetch(`${BASE}/send`, {
+    const multi = channels.length > 1
+    // 官方 /batchSend：channel 值逗号分隔（与单发同名参数），option 需与渠道一一对应
+    const body = { ...base, channel: channels.join(',') }
+    const res = await fetch(`${BASE}/${multi ? 'batchSend' : 'send'}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(15_000),
     })
     const raw = await res.text()
-    let json: { code?: number; msg?: string; data?: string } = {}
+    let json: { code?: number; msg?: string; data?: unknown } = {}
     try { json = JSON.parse(raw) } catch { /* 非 JSON 响应原样保留 */ }
     if (res.ok && json.code === 200) {
-      return { ok: true, shortCode: json.data || '', error: '', raw }
+      // batchSend 的 data 为流水号数组，取首个作为代表（全量在 raw 里）
+      const code = Array.isArray(json.data) ? String(json.data[0]?.shortCode ?? '') : String(json.data ?? '')
+      return { ok: true, shortCode: code, error: '', raw }
     }
     return { ok: false, shortCode: '', error: json.msg || `HTTP ${res.status}`, raw }
   } catch (err) {

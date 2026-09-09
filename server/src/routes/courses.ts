@@ -3,7 +3,7 @@ import { db } from '../db/database.ts'
 import { ok, fail } from '../utils.ts'
 import { allCourses, allTimes, dayView, weekOf } from '../services/schedule.ts'
 import type { Course } from '../services/schedule.ts'
-import { renderDay, renderDayHtml, renderWeek } from '../services/render.ts'
+import { renderDay, renderDayHtml, renderWeek, renderWeekHtml } from '../services/render.ts'
 import { addDays, mondayOf, todayInTz } from '../services/dates.ts'
 
 type CourseBody = {
@@ -177,7 +177,7 @@ export default async function courseRoutes(app: FastifyInstance): Promise<void> 
     } else if (type === 'week') {
       const m = mondayOf(todayInTz())
       title = `本周课表 · 第 ${weekOf(uid, m)} 周`
-      content = renderWeek(uid, m)
+      content = template === 'html' ? renderWeekHtml(uid, m) : renderWeek(uid, m)
     } else {
       const d = todayInTz()
       title = `今日课表 · ${d}`
