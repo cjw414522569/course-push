@@ -9,6 +9,8 @@ import { migrate } from './db/migrate.ts'
 import { reloadAllTasks } from './services/scheduler.ts'
 import { findUserByApiKey } from './services/apiKeys.ts'
 import { db } from './db/database.ts'
+import { purgeGraduatedUsers } from './services/graduate.ts'
+import { Cron } from 'croner'
 import authRoutes from './routes/auth.ts'
 import courseRoutes from './routes/courses.ts'
 import taskRoutes from './routes/tasks.ts'
@@ -79,6 +81,10 @@ if (fs.existsSync(WEB_DIST)) {
 
 await migrate()
 reloadAllTasks()
+
+// 毕业用户自动清理：启动时 + 每日 03:17
+purgeGraduatedUsers()
+new Cron('17 3 * * *', { timezone: 'Asia/Shanghai' }, () => { purgeGraduatedUsers() })
 
 await app.listen({ port: PORT, host: HOST })
 console.log(`✅ 课表推送平台已启动: http://localhost:${PORT}`)

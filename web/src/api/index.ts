@@ -2,13 +2,14 @@ import http from './http'
 import type {
   LoginResult, Me, Course, ClassTime, DayView, WeekView,
   PushTask, PushLog, Stats, PushplusSettings, SemesterSettings,
+  ApiKey, AdminUser,
 } from '../types'
 
 export const api = {
   login: (username: string, password: string) =>
     http.post<unknown, LoginResult>('/api/auth/login', { username, password }),
-  register: (username: string, password: string, nickname?: string) =>
-    http.post<unknown, LoginResult>('/api/auth/register', { username, password, nickname }),
+  register: (username: string, password: string, nickname?: string, grade?: number) =>
+    http.post<unknown, LoginResult>('/api/auth/register', { username, password, nickname, grade }),
   me: () => http.get<unknown, Me>('/api/auth/me'),
   changePassword: (oldPassword: string, newPassword: string) =>
     http.put('/api/auth/password', { oldPassword, newPassword }),

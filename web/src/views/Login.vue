@@ -20,6 +20,14 @@
         <el-form-item v-if="tab === 'register'" prop="nickname">
           <el-input v-model="form.nickname" placeholder="昵称（选填）" :prefix-icon="Postcard" />
         </el-form-item>
+        <el-form-item v-if="tab === 'register'" prop="grade">
+          <el-select v-model="form.grade" placeholder="当前年级（毕业时账号自动注销）" style="width: 100%">
+            <el-option :value="1" label="大一" />
+            <el-option :value="2" label="大二" />
+            <el-option :value="3" label="大三" />
+            <el-option :value="4" label="大四" />
+          </el-select>
+        </el-form-item>
         <el-button type="primary" size="large" style="width: 100%" :loading="loading" @click="submit">
           {{ tab === 'login' ? '登 录' : '注 册' }}
         </el-button>
@@ -40,7 +48,7 @@ const router = useRouter()
 const tab = ref<'login' | 'register'>('login')
 const formRef = ref<FormInstance>()
 const loading = ref(false)
-const form = reactive({ username: '', password: '', nickname: '' })
+const form = reactive({ username: '', password: '', nickname: '', grade: undefined as number | undefined })
 
 const rules: FormRules = {
   username: [
@@ -51,6 +59,7 @@ const rules: FormRules = {
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '至少 6 位', trigger: 'blur' },
   ],
+  grade: [{ required: true, message: '请选择当前年级', trigger: 'change' }],
 }
 
 async function submit() {
@@ -60,7 +69,7 @@ async function submit() {
   try {
     const res = tab.value === 'login'
       ? await api.login(form.username, form.password)
-      : await api.register(form.username, form.password, form.nickname)
+      : await api.register(form.username, form.password, form.nickname, form.grade)
     localStorage.setItem('kb_token', res.token)
     localStorage.setItem('kb_user', JSON.stringify({ nickname: res.nickname, username: res.username, role: res.role }))
     ElMessage.success(tab.value === 'login' ? '登录成功' : '注册成功')

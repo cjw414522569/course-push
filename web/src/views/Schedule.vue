@@ -771,6 +771,9 @@ thead th.today { background: #ecf5ff; }
   background: linear-gradient(180deg, #f5f7fa 0%, #ecf5ff 100%);
   border: 1px solid #ebeef5;
   text-align: center;
+}
+/* .grid td 的 vertical-align:top 特异性更高，需同级覆盖 */
+.grid td.seg-cell {
   vertical-align: middle;
 }
 .seg-text {

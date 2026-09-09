@@ -6,6 +6,7 @@ import { encrypt, mask } from '../services/crypto.ts'
 import { getSetting, setSetting, initUserSettings, invalidateSettingsCache } from '../services/userSettings.ts'
 import { createApiKey, listApiKeys, setApiKeyEnabled, deleteApiKey } from '../services/apiKeys.ts'
 import { registrationEnabled } from './admin.ts'
+import { graduationDate } from '../services/dates.ts'
 
 export default async function authRoutes(app: FastifyInstance): Promise<void> {
   // ---------- 登录 / 注册 ----------
@@ -25,18 +26,20 @@ export default async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/api/auth/register', async (req, reply) => {
     if (!registrationEnabled()) return reply.code(403).send(fail('管理员已关闭注册，请联系管理员开通账号', 403))
-    const { username, password, nickname } = (req.body || {}) as { username?: string; password?: string; nickname?: string }
+    const { username, password, nickname, grade } = (req.body || {}) as { username?: string; password?: string; nickname?: string; grade?: number }
     if (!username || !/^[a-zA-Z0-9_]{3,20}$/.test(username)) return reply.code(400).send(fail('用户名 3-20 位，仅字母数字下划线'))
     if (!password || password.length < 6) return reply.code(400).send(fail('密码至少 6 位'))
+    if (!grade || !Number.isInteger(grade) || grade < 1 || grade > 4) return reply.code(400).send(fail('请选择年级（大一至大四）'))
     const exists = db.prepare('SELECT id FROM users WHERE username = ?').get(username)
     if (exists) return reply.code(409).send(fail('用户名已被占用'))
     const now = new Date().toISOString()
-    const info = db.prepare('INSERT INTO users (username, password_hash, nickname, role, created_at) VALUES (?,?,?,?,?)')
-      .run(username, bcrypt.hashSync(password, 10), (nickname || username).slice(0, 20), 'user', now)
+    const graduate = graduationDate(grade)
+    const info = db.prepare('INSERT INTO users (username, password_hash, nickname, role, grade, graduate_date, created_at) VALUES (?,?,?,?,?,?,?)')
+      .run(username, bcrypt.hashSync(password, 10), (nickname || username).slice(0, 20), 'user', grade, graduate, now)
     const uid = Number(info.lastInsertRowid)
     initUserSettings(uid)
     const token = app.jwt.sign({ id: uid, username, role: 'user' }, { expiresIn: '7d' })
-    return ok({ token, nickname: (nickname || username).slice(0, 20), username, role: 'user' })
+    return ok({ token, nickname: (nickname || username).slice(0, 20), username, role: 'user', graduate_date: graduate })
   })
 
   app.get('/api/auth/me', { onRequest: [app.authenticate] }, async (req) => {

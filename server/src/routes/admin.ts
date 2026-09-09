@@ -43,7 +43,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/admin/users', admin, async (req, reply) => {
     if (!adminGuard(req, reply)) return
     const rows = db.prepare(
-      `SELECT u.id, u.username, u.nickname, u.role, u.disabled, u.created_at,
+      `SELECT u.id, u.username, u.nickname, u.role, u.disabled, u.grade, u.graduate_date, u.created_at,
               (SELECT COUNT(*) FROM courses c WHERE c.user_id = u.id) AS course_count,
               (SELECT COUNT(*) FROM push_tasks t WHERE t.user_id = u.id) AS task_count,
               (SELECT COUNT(*) FROM api_keys k WHERE k.user_id = u.id) AS key_count

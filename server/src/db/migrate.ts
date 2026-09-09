@@ -10,6 +10,8 @@ export function migrate(): void {
       password_hash TEXT NOT NULL,
       nickname TEXT NOT NULL DEFAULT '',
       role TEXT NOT NULL DEFAULT 'user',
+      grade INTEGER NOT NULL DEFAULT 1,
+      graduate_date TEXT NOT NULL DEFAULT '',
       disabled INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL
     );
@@ -130,6 +132,14 @@ export function migrate(): void {
     const cols = tableCols('users')
     if (cols.length > 0 && !cols.some((c) => c.name === 'disabled')) {
       db.exec('ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0')
+    }
+    if (cols.length > 0 && !cols.some((c) => c.name === 'grade')) {
+      db.exec("ALTER TABLE users ADD COLUMN grade INTEGER NOT NULL DEFAULT 1")
+    }
+    if (cols.length > 0 && !cols.some((c) => c.name === 'graduate_date')) {
+      db.exec("ALTER TABLE users ADD COLUMN graduate_date TEXT NOT NULL DEFAULT ''")
+      // 存量用户按默认大一补毕业日期
+      db.exec("UPDATE users SET graduate_date = '' || (CAST(strftime('%Y','now') AS INTEGER) + 3) || '-06-30' WHERE graduate_date = ''")
     }
   }
 

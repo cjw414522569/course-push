@@ -33,6 +33,14 @@
             <el-tag :type="row.disabled ? 'warning' : 'success'" size="small">{{ row.disabled ? '已停用' : '正常' }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="年级" width="80" align="center">
+          <template #default="{ row }">{{ ['', '大一', '大二', '大三', '大四'][row.grade] || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="毕业注销日" width="110">
+          <template #default="{ row }">
+            <span class="muted">{{ row.graduate_date || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="课程" prop="course_count" width="70" align="center" />
         <el-table-column label="任务" prop="task_count" width="70" align="center" />
         <el-table-column label="密钥" prop="key_count" width="70" align="center" />
