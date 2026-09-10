@@ -116,7 +116,3 @@ WaveBench 使用 MIT 许可证。
 <img src="https://cdn3.ldstatic.com/original/3X/9/7/97ed5d6d97f4c7f3dc0670d097bf457527c375f5.png" alt="linuxDoLogo" width="150" />
 
 感谢 [Linux DO 社区](https://linux.do/)提供交流和支持。
-
-<img src="https://www.krill-code.com/brand/logo-horizontal.png" alt="Krill" width="150" />
-
-感谢 [Krill AI](https://www.krill-code.com/) 对本项目的赞助。
